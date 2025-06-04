@@ -148,10 +148,20 @@ You can run the scripts in [/evaluate]() directory to conduct inference. For exa
 eval_truthfulqa.sh
 ```
 
-## Acknowledgement
+## Acknowledgement and Citation
 
 We thank the [verl](https://github.com/volcengine/verl) for providing the awesome open-source RL infrastructure.
 
-Our open-sourced experiments were conducted on the Volcano Engine Machine Learning Platform. We will provide a full reproduction guideline later on the Volcano Engine platform to help users replicate our experiments.
+If you use the data or code in this repo, please cite the following paper:
 
-<!-- ## Citation -->
+```
+@inproceedings{FSPO,
+  author = {Junyi Li and Hwee Tou Ng},
+  title = {The Hallucination Dilemma: Factuality-Aware Reinforcement Learning for Large Reasoning Models},
+  year = {2025},
+  eprint={2505.24630},
+  archivePrefix={arXiv},
+  primaryClass={cs.CL},
+  url={https://arxiv.org/abs/2505.24630}, 
+}
+```
