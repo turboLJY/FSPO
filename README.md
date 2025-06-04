@@ -30,7 +30,9 @@ We propose **F**actuality-aware **S**tep-wise **P**olicy **O**ptimization (**FSP
 
 ![alt text](assets/cd.png)
 
-## Model Use
+## Reproducibility
+
+To benefit the broader research community, we fully open-source the recipe of our RL training, including algorithm details, dataset, and infrastructures.
 
 ### Environment Setup
 
@@ -42,112 +44,109 @@ conda activate fspo
 pip3 install -r requirements.txt
 ```
 
-### Inference
-
-We provide the model inference code here:
-
-```python
-import torch
-from transformers import AutoTokenizer
-from vllm import SamplingParams, LLM
-
-examples = [
-    {
-        "question": "Solve the following math problem step by step. The last line of your response should be of the form Answer: $Answer (without quotes) where $Answer is the answer to the problem.\n\nFind the largest possible real part of \\[(75+117i)z+\\frac{96+144i}{z}\\]where $z$ is a complex number with $|z|=4$.\n\nRemember to put your answer on its own line after \"Answer:\".",
-        "answer": "540"
-    },
-    {
-        "question": "Solve the following math problem step by step. The last line of your response should be of the form Answer: $Answer (without quotes) where $Answer is the answer to the problem.\n\nEvery morning Aya goes for a $9$-kilometer-long walk and stops at a coffee shop afterwards. When she walks at a constant speed of $s$ kilometers per hour, the walk takes her 4 hours, including $t$ minutes spent in the coffee shop. When she walks $s+2$ kilometers per hour, the walk takes her 2 hours and 24 minutes, including $t$ minutes spent in the coffee shop. Suppose Aya walks at $s+\\frac{1}{2}$ kilometers per hour. Find the number of minutes the walk takes her, including the $t$ minutes spent in the coffee shop.\n\nRemember to put your answer on its own line after \"Answer:\".",
-        "answer": "204"
-    },
-    {
-        "question": "Solve the following math problem step by step. The last line of your response should be of the form Answer: $Answer (without quotes) where $Answer is the answer to the problem.\n\nLet $\\mathcal{B}$ be the set of rectangular boxes with surface area $54$ and volume $23$. Let $r$ be the radius of the smallest sphere that can contain each of the rectangular boxes that are elements of $\\mathcal{B}$. The value of $r^2$ can be written as $\\frac{p}{q}$, where $p$ and $q$ are relatively prime positive integers. Find $p+q$.\n\nRemember to put your answer on its own line after \"Answer:\".",
-        "answer": "721"
-    }
-]
-
-
-def main():
-    model = "BytedTsinghua-SIA/DAPO-Qwen-32B"
-
-    tokenzier = AutoTokenizer.from_pretrained(model)
-
-    llm = LLM(
-        model=model,
-        dtype=torch.bfloat16,
-        tensor_parallel_size=8,
-        gpu_memory_utilization=0.95
-    )
-
-    sampling_params = SamplingParams(
-        temperature=1.0,
-        top_p=0.7,
-        max_tokens=20480
-    )
-
-    for example in examples:
-        question = example["question"]
-        answer = example["answer"]
-        output = llm.generate(
-                    prompts=tokenzier.apply_chat_template(conversation=[{"content": question, "role": "user"}],
-                                                          add_generation_prompt=True,
-                                                          tokenize=False),
-                    sampling_params=sampling_params
-                )
-        print(f"***QUESTION***:\n{question}\n***GROUND TRUTH***:\n{answer}\n***MODEL OUTPUT***:\n{output[0].outputs[0].text}\n")
-        print("-"*100)
-
-if __name__ == "__main__":
-    main()
-```
-
-### Evaluation on AIME 2024
-
-To evaluate the model on AIME 2024, we deploy DAPO-Qwen-32B with Ray Serve and vLLM.
-
-To load the model from Huggingface:
-
-```bash
-serve run eval.llm:build_app model=BytedTsinghua-SIA/DAPO-Qwen-32B tensor-parallel-size=8
-
-# open another terminal
-python eval/eval_aime24.py --temperature 1.0 --top_p 0.7 --max_tokens 20480 --model BytedTsinghua-SIA/DAPO-Qwen-32B --test_file eval/aime-2024.parquet
-```
-
-To load the model from local path:
-
-```bash
-serve run eval.llm:build_app model=aaa/bbb/ccc tensor-parallel-size=8
-
-# open another terminal
-python eval/eval_aime24.py --temperature 1.0 --top_p 0.7 --max_tokens 20480 --model ccc --test_file eval/aime-2024.parquet
-```
-
-## Reproducibility
-
-To benefit the broader research community, we fully open-source the recipe of our RL training, including algorithm details, dataset, and infrastructures.
-
 ### Datasets
 We provide the post-processed training and evaluation datasets for FSPO at the [data](https://github.com/turboLJY/FSPO/tree/master/data) directory.
 
-If you want to process the original datasets by yourself, you can first download the SimpleRL dataset (~8K) from [simpleRL-reason](https://github.com/hkust-nlp/simpleRL-reason) and the challenging HotpotQA subset (~2K) from [R1-Searcher](https://github.com/RUCAIBox/R1-Searcher) as our training dataset. Then, you can run ```math_dataset.py```, ```hotpot.py``` scripts in the directory [examples/data_preprocess](https://github.com/turboLJY/FSPO/tree/master/examples/data_preprocess).
-
-Training: [DAPO-Math-17k](https://huggingface.co/datasets/BytedTsinghua-SIA/DAPO-Math-17k), a carefully curated and processed math dataset.
-Validation: [AIME 2024](https://huggingface.co/datasets/BytedTsinghua-SIA/AIME-2024).
+If you want to process the original datasets by yourself, you can first download the SimpleRL dataset (~8K) from [simpleRL-reason](https://github.com/hkust-nlp/simpleRL-reason) and the challenging HotpotQA subset (~2K) from [R1-Searcher](https://github.com/RUCAIBox/R1-Searcher) as our raw training dataset. Then, you can run ```math_dataset.py```, ```hotpot.py``` scripts in the directory [examples/data_preprocess](https://github.com/turboLJY/FSPO/tree/master/examples/data_preprocess) to process them. For evaluation, you can download TruthfulQA, HalluQA, HaluEval, GSM8K, MATH-500, AIME2024, AIME2025 from their sources and use the scripts in the directory [examples/data_preprocess](https://github.com/turboLJY/FSPO/tree/master/examples/data_preprocess) to process them.
 
 ### Training
 
-We provide the [out-of-the-box](https://github.com/volcengine/verl/blob/gm-tyx/puffin/main/recipe/dapo) script for DAPO training reproduction. Quickstart and core code are mentioned in [README](https://github.com/volcengine/verl/blob/gm-tyx/puffin/main/recipe/dapo/README.md). These are scripts for:
+The core code relevant to our algortihm lies in line 150-152 in ```ray_trainer.py``` to adjust the token advantage values:
 
-- [Datasets Preparation](https://github.com/volcengine/verl/blob/gm-tyx/puffin/main/recipe/dapo/prepare_dapo_data.sh)
-- [DAPO w/o Token-level PG Loss & Dynamic Sampling -- AIME 44](https://github.com/volcengine/verl/blob/gm-tyx/puffin/main/recipe/dapo/run_dapo_early_qwen2.5_32b.sh)
-- [DAPO Full -- AIME 50](https://github.com/volcengine/verl/blob/gm-tyx/puffin/main/recipe/dapo/run_dapo_qwen2.5_32b.sh)
+```
+sentence_mask = data.batch['sentence_mask']
+flip_mask = (sentence_mask * advantages) >= 0.0
+advantages = torch.where(flip_mask, advantages, -advantages)
+```
 
-Note:
+To run the training based on different models, you can run the following command:
 
-- The `DAPO w/o Token-level PG Loss & Dynamic Sampling -- AIME 44` script has been verified on the current verl and achieves 44 points on AIME 2024, whose training record can be accessed in [wandb](https://wandb.ai/verl-org/DAPO%20Reproduction%20on%20verl?nw=u7n2j5sht28).
+```
+bash main_grpo_qwen_base.sh
+bash main_grpo_qwen_instruct.sh
+bash main_grpo_llama_instruct.sh
+```
 
-- The `DAPO Full -- AIME 50` script has also been validated on the latest verl version. It scores 50 points on AIME 2024. You can view the corresponding training record on [wandb](https://wandb.ai/verl-org/DAPO%20Reproduction%20on%20verl?nw=wmb4qxfht0n).
+### Inference
+
+Since verl stores the model weights in shard checkpoints, I provide the following code to combine them for inference:
+
+```
+def load_sharded_model(fsdp_checkpoint_path):
+    state_dict = defaultdict(list)
+    checkpoint_dir = Path(fsdp_checkpoint_path)
+
+    shard_files = list(checkpoint_dir.glob("model_world_size_*_rank_*.pt"))
+    if not shard_files:
+        raise ValueError(f"No checkpoint files found in {fsdp_checkpoint_path}")
+
+    pattern = re.compile(r"model_world_size_(\d+)_rank_(\d+)\.pt")
+    world_sizes = set()
+    for file in shard_files:
+        match = pattern.match(file.name)
+        if match:
+            world_sizes.add(int(match.group(1)))
+
+    if len(world_sizes) != 1:
+        raise ValueError(
+            f"Inconsistent world_size found in checkpoint files: {world_sizes}"
+        )
+
+    world_size = world_sizes.pop()
+    print(f"Found checkpoints with world_size = {world_size}")
+
+    for rank in range(world_size):
+        filepath = checkpoint_dir / f"model_world_size_{world_size}_rank_{rank}.pt"
+        if not filepath.exists():
+            raise ValueError(f"Missing shard file: {filepath}")
+
+        print(f"Loading shard: {filepath}")
+        shard_dict = torch.load(filepath, weights_only=False)
+
+        for key, value in shard_dict.items():
+            if hasattr(value, "to_local"):
+                value = value.to_local()
+            state_dict[key].append(value)
+
+    consolidated_state_dict = {}
+    for key in state_dict:
+        try:
+            consolidated_state_dict[key] = torch.cat(state_dict[key], dim=0)
+        except (RuntimeError, TypeError):
+            consolidated_state_dict[key] = state_dict[key][0]
+            print(
+                f"Parameter '{key}' does not need concatenation, using first shard value"
+            )
+
+    return consolidated_state_dict
+
+
+def initialize_model_and_tokenizer(local_path, trust_remote_code=True, torch_dtype=torch.bfloat16):
+    tokenizer = hf_tokenizer(local_path, trust_remote_code=trust_remote_code)
+
+    actor_model_config = AutoConfig.from_pretrained(local_path, trust_remote_code=trust_remote_code)
+    actor_module = AutoModelForCausalLM.from_pretrained(
+        pretrained_model_name_or_path=local_path,
+        torch_dtype=torch_dtype,
+        config=actor_model_config,
+        attn_implementation="flash_attention_2",
+        trust_remote_code=trust_remote_code,
+    )
+
+    return tokenizer, actor_module
+
+tokenizer, model = initialize_model_and_tokenizer(args.base_model_path)
+state_dict = load_sharded_model(args.shared_ckpt_path)
+model.load_state_dict(state_dict)
+model.to(torch.bfloat16)
+model.to(device)
+```
+
+You can run the scripts in [/evaluate]() directory to conduct inference. For example, 
+
+```
+eval_truthfulqa.sh
+```
 
 ## Acknowledgement
 
