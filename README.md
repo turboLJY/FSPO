@@ -61,7 +61,7 @@ advantages = torch.where(flip_mask, advantages, -advantages)
 
 To run the training based on different models, you can run the following command:
 
-```python
+```bash
 bash main_grpo_qwen_base.sh
 bash main_grpo_qwen_instruct.sh
 bash main_grpo_llama_instruct.sh
@@ -144,7 +144,7 @@ model.to(device)
 
 You can run the scripts in [/evaluate]() directory to conduct inference. For example, 
 
-```python
+```bash
 eval_truthfulqa.sh
 ```
 
