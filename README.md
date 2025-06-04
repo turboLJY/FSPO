@@ -53,7 +53,7 @@ If you want to process the original datasets by yourself, you can first download
 
 The core code relevant to our algortihm lies in line 150-152 in ```ray_trainer.py``` to adjust the token advantage values:
 
-```
+```python
 sentence_mask = data.batch['sentence_mask']
 flip_mask = (sentence_mask * advantages) >= 0.0
 advantages = torch.where(flip_mask, advantages, -advantages)
@@ -61,7 +61,7 @@ advantages = torch.where(flip_mask, advantages, -advantages)
 
 To run the training based on different models, you can run the following command:
 
-```
+```python
 bash main_grpo_qwen_base.sh
 bash main_grpo_qwen_instruct.sh
 bash main_grpo_llama_instruct.sh
@@ -71,7 +71,7 @@ bash main_grpo_llama_instruct.sh
 
 Since verl stores the model weights in shard checkpoints, I provide the following code to combine them for inference:
 
-```
+```python
 def load_sharded_model(fsdp_checkpoint_path):
     state_dict = defaultdict(list)
     checkpoint_dir = Path(fsdp_checkpoint_path)
@@ -144,7 +144,7 @@ model.to(device)
 
 You can run the scripts in [/evaluate]() directory to conduct inference. For example, 
 
-```
+```python
 eval_truthfulqa.sh
 ```
 
